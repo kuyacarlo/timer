@@ -1,0 +1,175 @@
+---
+import '../styles/global.css'
+
+const apiUrl = import.meta.env.PUBLIC_API_URL ?? (import.meta.env.DEV ? 'http://localhost:8787' : '')
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="description" content="A simple, considered countdown timer." />
+    <title>Stilltime — a quieter timer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400&display=swap" rel="stylesheet" />
+  </head>
+  <body data-api-url={apiUrl} class="min-h-screen bg-[#f4f3ef] text-[#282b27] antialiased selection:bg-[#435d49] selection:text-white">
+    <main class="desktop-app mx-auto flex min-h-screen w-full max-w-[1760px] flex-col px-14 py-9">
+      <header class="flex w-full items-center justify-between border-b border-[#deddd5] pb-6">
+        <a href="/" class="flex items-center gap-3 text-[17px] font-semibold tracking-[-0.03em] text-[#30372f] no-underline">
+          <span class="flex h-10 w-10 items-center justify-center rounded-full bg-[#35483a] text-[#f4f3ef]" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.25" stroke="currentColor" stroke-width="1.5"/><path d="M10 5.5V10l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>stilltime
+        </a>
+        <div class="flex items-center gap-2.5 text-[12px] font-medium uppercase tracking-[0.13em] text-[#74766e]"><span class="h-2 w-2 rounded-full bg-[#778b69]"></span> Your time, in focus</div>
+      </header>
+
+      <div class="flex flex-1 flex-col items-center justify-center py-12">
+        <section class="w-full text-center">
+          <h1 class="display-face mb-4 text-[58px] font-normal tracking-[-0.035em] text-[#30372f]">When should it end?</h1>
+          <p class="mx-auto mb-10 text-[17px] leading-7 text-[#777970]">Choose a clock time. We’ll count down to it.</p>
+
+          <div class="mx-auto w-full max-w-[1280px]">
+            <form id="timer-form">
+              <label for="end-time" class="mb-3 block text-[13px] font-medium uppercase tracking-[0.14em] text-[#85867d]">End time</label>
+              <input id="end-time" name="endTime" type="time" step="60" required class="mb-3 w-[5.2em] border-0 bg-transparent p-0 text-center font-mono text-[clamp(10rem,15vw,15rem)] font-light leading-none tracking-[-0.04em] text-[#30372f] outline-none focus:text-[#526b54]" aria-describedby="end-time-help" />
+              <p id="end-time-help" class="mb-10 text-[14px] text-[#85867d]">A time that’s passed means tomorrow.</p>
+              <button id="start-button" type="submit" class="min-w-[320px] rounded-full bg-[#35483a] px-14 py-5 text-[16px] font-medium text-white transition hover:bg-[#293a2e] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[#657c65]">Start countdown</button>
+            </form>
+            <div id="active-timer" class="hidden">
+              <div id="countdown-display" class="mb-4 font-mono text-[clamp(7rem,11vw,10rem)] font-light leading-none tracking-[-0.04em] tabular-nums text-[#30372f]" role="timer" aria-label="Time remaining"></div>
+              <p id="timer-status" aria-live="polite" class="mb-8 text-[16px] text-[#85867d]">Counting down to the chosen time.</p>
+              <button id="reset-button" type="button" class="rounded-full border border-[#dcdad2] px-8 py-4 text-[15px] font-medium text-[#60635a] transition hover:bg-[#e9e8e1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#657c65]">Reset timer</button>
+            </div>
+            <p id="error-message" class="mt-5 hidden text-[14px] text-[#a34e3f]" role="alert"></p>
+          </div>
+          <p id="hint" class="mt-8 text-[13px] text-[#85867d]">Take a breath. You have time.</p>
+        </section>
+      </div>
+
+      <footer class="flex w-full items-center justify-between border-t border-[#deddd5] pt-5 text-[12px] text-[#85867d]"><span>stilltime</span><span>Made for the present moment</span></footer>
+    </main>
+
+    <section class="desktop-message" aria-label="Desktop required">
+      <div>
+        <p class="display-face text-4xl text-[#30372f]">Stilltime is made for desktop.</p>
+        <p class="mt-3 text-[#777970]">Open this timer on a screen at least 1100 pixels wide.</p>
+      </div>
+    </section>
+
+    <script>
+      const apiUrl = document.body.dataset.apiUrl ?? ''
+      const form = document.querySelector<HTMLFormElement>('#timer-form')!
+      const active = document.querySelector<HTMLElement>('#active-timer')!
+      const error = document.querySelector<HTMLElement>('#error-message')!
+      const display = document.querySelector<HTMLElement>('#countdown-display')!
+      const hint = document.querySelector<HTMLElement>('#hint')!
+      const status = document.querySelector<HTMLElement>('#timer-status')!
+      const endTime = document.querySelector<HTMLInputElement>('#end-time')!
+      let interval: number | undefined
+      let activeEndsAt = ''
+
+      const formatTime = (total: number) => [Math.floor(total / 3600), Math.floor((total % 3600) / 60), total % 60].map((part) => String(part).padStart(2, '0')).join(':')
+      const targetDate = (value: string) => {
+        const [hour, minute] = value.split(':').map(Number)
+        const target = new Date()
+        target.setHours(hour, minute, 0, 0)
+        if (target.getTime() <= Date.now()) target.setDate(target.getDate() + 1)
+        return target
+      }
+      const setUrlForEndTime = () => {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('timer')
+        if (endTime.value) url.searchParams.set('end', endTime.value)
+        else url.searchParams.delete('end')
+        window.history.replaceState(null, '', url)
+      }
+      const showActive = (timer: { id: string; endsAt: string }) => {
+        activeEndsAt = timer.endsAt
+        const localEnd = new Date(timer.endsAt)
+        endTime.value = `${String(localEnd.getHours()).padStart(2, '0')}:${String(localEnd.getMinutes()).padStart(2, '0')}`
+        window.clearInterval(interval)
+        form.classList.add('hidden')
+        active.classList.remove('hidden')
+        display.textContent = formatTime(Math.max(0, Math.ceil((Date.parse(timer.endsAt) - Date.now()) / 1000)))
+        display.setAttribute('aria-live', 'off')
+        status.textContent = `Counting down to ${new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(Date.parse(timer.endsAt))}.`
+        hint.textContent = 'Your timer stays here if you refresh.'
+        const tick = () => {
+          const remaining = Math.max(0, Math.ceil((Date.parse(activeEndsAt) - Date.now()) / 1000))
+          display.textContent = formatTime(remaining)
+          if (remaining === 0) {
+            status.textContent = 'Time is yours again.'
+            status.classList.add('text-[#667c5e]')
+            display.classList.add('text-[#778b69]')
+        document.querySelector<HTMLButtonElement>('#reset-button')!.textContent = 'Set another timer'
+            hint.textContent = 'Take a breath. You have time.'
+            window.clearInterval(interval)
+          }
+        }
+        tick()
+        interval = window.setInterval(tick, 250)
+      }
+      const reset = () => {
+        window.clearInterval(interval)
+        activeEndsAt = ''
+        active.classList.add('hidden')
+        form.classList.remove('hidden')
+        display.classList.remove('text-[#778b69]')
+        display.removeAttribute('aria-live')
+        hint.textContent = 'Take a breath. You have time.'
+        status.textContent = 'Counting down to the chosen time.'
+        status.classList.remove('text-[#667c5e]')
+        document.querySelector<HTMLButtonElement>('#reset-button')!.textContent = 'Reset timer'
+        error.classList.add('hidden')
+        setUrlForEndTime()
+      }
+
+      const pageUrl = new URL(window.location.href)
+      const queryEndTime = pageUrl.searchParams.get('end')
+      const validQueryEndTime = Boolean(queryEndTime && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(queryEndTime))
+      if (validQueryEndTime && queryEndTime) endTime.value = queryEndTime
+      endTime.addEventListener('change', setUrlForEndTime)
+      document.querySelector<HTMLButtonElement>('#reset-button')!.addEventListener('click', reset)
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault()
+        if (!endTime.value) return
+        const endsAt = targetDate(endTime.value).toISOString()
+        const button = document.querySelector<HTMLButtonElement>('#start-button')!
+        button.disabled = true
+        button.textContent = 'Starting…'
+        error.classList.add('hidden')
+        try {
+          const response = await fetch(`${apiUrl}/api/timers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endsAt }) })
+          if (!response.ok) throw new Error('Could not save the end time. Check your connection and try again.')
+          const timer = await response.json() as { id: string; endsAt: string }
+          const url = new URL(window.location.href)
+          url.searchParams.delete('end')
+          url.searchParams.set('timer', timer.id)
+          window.history.replaceState(null, '', url)
+          showActive(timer)
+        } catch (cause) {
+          error.textContent = cause instanceof Error ? cause.message : 'Something went wrong. Try again.'
+          error.classList.remove('hidden')
+        } finally {
+          button.disabled = false
+          button.textContent = 'Start countdown'
+        }
+      })
+      const timerId = pageUrl.searchParams.get('timer')
+      if (timerId) fetch(`${apiUrl}/api/timers/${encodeURIComponent(timerId)}`).then(async (response) => {
+        if (!response.ok) throw new Error('Timer not found')
+        return response.json() as Promise<{ id: string; endsAt: string }>
+      }).then(showActive).catch(() => {
+        error.textContent = 'This timer link could not be opened.'
+        error.classList.remove('hidden')
+        const url = new URL(window.location.href)
+        url.searchParams.delete('timer')
+        window.history.replaceState(null, '', url)
+      })
+      else if (validQueryEndTime) form.requestSubmit()
+    </script>
+  </body>
+</html>

@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+:root {
+  font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  color: #282b27;
+  background: #f4f3ef;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, input { font: inherit; }
+.display-face { font-family: "Newsreader", Georgia, serif; }
+.desktop-message { display: none; }
+
+@media (max-width: 1099px) {
+  .desktop-app { display: none; }
+  .desktop-message {
+    display: grid;
+    min-height: 100vh;
+    place-content: center;
+    padding: 3rem;
+    text-align: center;
+  }
+}

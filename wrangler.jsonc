@@ -1,0 +1,24 @@
+{
+  "$schema": "./apps/api/node_modules/wrangler/config-schema.json",
+  "name": "timer",
+  "account_id": "04a311dd63265e896ca15a8e8124f144",
+  "main": "apps/api/src/index.ts",
+  "compatibility_date": "2026-10-03",
+  "observability": { "enabled": true },
+  "routes": [
+    { "pattern": "timer.kuyacarlo.dev", "custom_domain": true }
+  ],
+  "assets": {
+    "directory": "./apps/web/dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/health"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "stilltime-db",
+      "database_id": "2bd62291-a246-4cf4-85b2-c63040820722",
+      "migrations_dir": "apps/api/migrations"
+    }
+  ]
+}

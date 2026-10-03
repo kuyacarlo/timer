@@ -1,0 +1,21 @@
+{
+  "name": "@starter/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --config ../../wrangler.jsonc --port 8787",
+    "build": "wrangler types ../../worker-configuration.d.ts --config ../../wrangler.jsonc && tsc --noEmit && wrangler deploy --dry-run --config ../../wrangler.jsonc",
+    "deploy": "wrangler deploy --config ../../wrangler.jsonc",
+    "typecheck": "wrangler types ../../worker-configuration.d.ts --config ../../wrangler.jsonc && tsc --noEmit",
+    "lint": "eslint src",
+    "types": "wrangler types ../../worker-configuration.d.ts --config ../../wrangler.jsonc"
+  },
+  "dependencies": {
+    "hono": "^4.10.4",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "wrangler": "^4.147.0"
+  }
+}

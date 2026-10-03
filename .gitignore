@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.astro/
+.expo/
+web-build/
+coverage/
+.env
+.env.*
+!.env.example
+.wrangler/
+*.tsbuildinfo
+apps/api/src/generated/prisma/
+.wrangler/
+.DS_Store

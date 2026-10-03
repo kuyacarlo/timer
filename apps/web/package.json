@@ -1,0 +1,21 @@
+{
+  "name": "@starter/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 0.0.0.0",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check",
+    "lint": "eslint astro.config.mjs"
+  },
+  "dependencies": {
+    "astro": "^5.15.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@tailwindcss/vite": "^4.1.16",
+    "tailwindcss": "^4.1.16",
+    "typescript": "~5.9.3"
+  }
+}
